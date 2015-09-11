@@ -4,13 +4,71 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
-    <!--
+    <parameters>
+        <parameter key="sulu_ldap.security.user.provider.class">Sulu\Bundle\LdapBundle\Provider\LdapUserProvider</parameter>
+        <parameter key="sulu_ldap.ldap_connection.class">Sulu\Bundle\LdapBundle\Manager\LdapConnection</parameter>
+        <parameter key="sulu_ldap.ldap_manager.class">Sulu\Bundle\LdapBundle\Manager\LdapUserManager</parameter>
+        <parameter key="sulu_ldap.user.model.class">Sulu\Bundle\LdapBundle\Entity\User</parameter>
+        <parameter key="sulu_ldap.security.authentication.provider.class">Sulu\Bundle\LdapBundle\Provider\LdapAuthenticationProvider</parameter>
+        <parameter key="sulu_ldap.security.authentication.listener.class">Sulu\Bundle\LdapBundle\EventListener\LdapListener</parameter>
+        <parameter key="sulu_ldap.security.authentication.form_entry_point.class">Symfony\Component\Security\Http\EntryPoint\FormAuthenticationEntryPoint</parameter>
+    </parameters>
+
     <services>
-        <service id="sulu_ldap.example" class="Sulu\Bundle\LdapBundle\Example">
-            <argument type="service" id="service_id" />
-            <argument>plain_value</argument>
-            <argument>%parameter_name%</argument>
+        <service id="sulu_ldap.security.authentication.form_entry_point" class="%sulu_ldap.security.authentication.form_entry_point.class%" public="false" abstract="true">
+            <argument type="service" id="http_kernel" />
+        </service>
+
+        <service id="sulu_ldap.security.user_repository" class="Sulu\Bundle\LdapBundle\Entity\UserRepository"
+                 factory-service="doctrine.orm.entity_manager" factory-method="getRepository">
+            <argument>%sulu_ldap.user.model.class%</argument>
+        </service>
+
+        <service id="sulu_ldap.security.user.provider" class="%sulu_ldap.security.user.provider.class%">
+            <argument type="service" id="sulu_ldap.security.user_repository"/>
+            <argument type="service" id="sulu.repository.role"/>
+            <argument type="service" id="sulu_contact.contact_repository"/>
+            <argument type="service" id="sulu_ldap.ldap_manager"/>
+            <argument type="service" id="doctrine.orm.default_entity_manager"/>
+            <argument>%sulu_ldap.authentication.bind_username_before%</argument>
+        </service>
+
+        <service id="sulu_ldap.ldap_connection" class="%sulu_ldap.ldap_connection.class%" public="false">
+            <argument>%sulu_ldap.ldap_connection.params%</argument>
+            <tag name="monolog.logger" channel="ldap_connection" />
+            <argument type="service" id="logger" />
+        </service>
+
+        <service id="sulu_ldap.ldap_manager" class="%sulu_ldap.ldap_manager.class%">
+            <argument type="service" id="sulu_ldap.ldap_connection"/>
+            <argument type="service" id="sulu.repository.role"/>
+        </service>
+
+        <service id="sulu_ldap.security.authentication.provider" class="%sulu_ldap.security.authentication.provider.class%">
+            <argument /> <!-- User Provider -->
+            <argument /> <!-- Dao Provider -->
+            <argument type="service" id="sulu_ldap.ldap_manager"/>
+            <argument type="service" id="event_dispatcher" on-invalid="null"/>
+            <argument /> <!-- Provider-key -->
+            <argument>%security.authentication.hide_user_not_found%</argument>
+            <argument /> <!-- security config -->
+        </service>
+
+        <service id="sulu_ldap.authentication.success_handler" parent="security.authentication.success_handler"/>
+        <service id="sulu_ldap.authentication.failure_handler" parent="security.authentication.failure_handler"/>
+
+        <service id="sulu_ldap.security.authentication.listener" class="%sulu_ldap.security.authentication.listener.class%" public="false">
+            <tag name="monolog.logger" channel="security"/>
+            <argument type="service" id="security.context"/>
+            <argument type="service" id="security.authentication.manager"/>
+            <argument type="service" id="security.authentication.session_strategy"/>
+            <argument type="service" id="security.http_utils"/>
+            <argument/>
+            <argument type="service" id="sulu_ldap.authentication.success_handler" on-invalid="null"/>
+            <argument type="service" id="sulu_ldap.authentication.failure_handler" on-invalid="null"/>
+            <argument type="collection"></argument>
+            <argument type="service" id="logger" on-invalid="null"/>
+            <argument type="service" id="event_dispatcher" on-invalid="null"/>
         </service>
     </services>
-    -->
 </container>
