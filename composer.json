@@ -15,7 +15,7 @@
   ],
   "require": {
     "php": ">=5.4",
-    "sulu/sulu": "dev-develop"
+    "sulu/sulu": ">=1.0.9"
   },
   "require-dev": {
     "sensio/framework-extra-bundle": "~3.0",
@@ -23,7 +23,7 @@
     "symfony/monolog-bundle": "2.4.*",
     "phpunit/phpunit": "~4.0.0",
     "symfony-cmf/testing": "~1.2",
-    "sulu/test-bundle": "dev-develop"
+    "sulu/test-bundle": ">=1.0.9"
   },
   "autoload": {
     "psr-0": {
