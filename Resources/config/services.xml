@@ -27,7 +27,7 @@
         <service id="sulu_ldap.security.user.provider" class="%sulu_ldap.security.user.provider.class%">
             <argument type="service" id="sulu_ldap.security.user_repository"/>
             <argument type="service" id="sulu.repository.role"/>
-            <argument type="service" id="sulu_contact.contact_repository"/>
+            <argument type="service" id="sulu.repository.contact"/>
             <argument type="service" id="sulu_ldap.ldap_manager"/>
             <argument type="service" id="doctrine.orm.default_entity_manager"/>
             <argument>%sulu_ldap.authentication.bind_username_before%</argument>
