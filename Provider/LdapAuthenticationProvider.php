@@ -100,7 +100,7 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
 
         try {
             if ($this->params['client']['auth_only']) {
-                $this->handleAuthOnly($token);
+                return $this->handleAuthOnly($token);
             }
 
             /** @var LdapUserInterface $user */
@@ -156,9 +156,9 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
         $userName = $token->getUser();
         if (isset($this->params['client']['login_domain'])) {
             $domain = $this->params['client']['login_domain'];
-            $loginName = $userName . '@' . $domain;
+            $userName = $userName . '@' . $domain;
         }
-        $status = $this->bind($loginName, $token);
+        $status = $this->bind($userName, $token);
 
         $user = null;
         if ($status) {
