@@ -38,6 +38,9 @@ class LdapUserProvider implements UserProviderInterface
     /** @var EntityManager */
     private $entityManager;
 
+    /** @var array */
+    private $params;
+
     /**
      * @param UserRepository $userRepository
      * @param RoleRepository $roleRepository
@@ -45,6 +48,7 @@ class LdapUserProvider implements UserProviderInterface
      * @param LdapUserManagerInterface $ldapManager
      * @param EntityManager $entityManager
      * @param bool|false $bindUsernameBefore
+     * @param array $params
      */
     public function __construct(
         UserRepository $userRepository,
@@ -52,7 +56,8 @@ class LdapUserProvider implements UserProviderInterface
         ContactRepository $contactRepository,
         LdapUserManagerInterface $ldapManager,
         EntityManager $entityManager,
-        $bindUsernameBefore = false
+        $bindUsernameBefore = false,
+        array $params
     ) {
         $this->ldapManager = $ldapManager;
         $this->bindUsernameBefore = $bindUsernameBefore;
@@ -60,6 +65,7 @@ class LdapUserProvider implements UserProviderInterface
         $this->contactRepository = $contactRepository;
         $this->roleRepository = $roleRepository;
         $this->entityManager = $entityManager;
+        $this->params = $params;
     }
 
     /**
@@ -90,6 +96,10 @@ class LdapUserProvider implements UserProviderInterface
 
         if (!$user instanceof LdapUserInterface) {
             throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', get_class($user)));
+        }
+
+        if ($this->params['client']['auth_only'] === true) {
+            return $user;
         }
 
         if ($this->bindUsernameBefore) {

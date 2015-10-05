@@ -43,7 +43,9 @@ class LdapUserManager implements LdapUserManagerInterface
     public function exists($username)
     {
         $this->setUsername($username);
-        $this->addLdapUser();
+        if ($this->params['client']['auth_only'] === false) {
+            $this->addLdapUser();
+        }
     }
 
     /**
@@ -54,14 +56,14 @@ class LdapUserManager implements LdapUserManagerInterface
         if (strlen($this->password) === 0) {
             throw new ConnectionException('Password can\'t be empty');
         }
-        
+
         if ($this->ldapUser === null) {
             $this->bindByUsername();
             $this->doPass();
         } else {
             $this->doPass();
             $this->bindByDn();
-        }        
+        }
     }
 
     /**
@@ -69,9 +71,10 @@ class LdapUserManager implements LdapUserManagerInterface
      */
     public function doPass()
     {
-        $this->addLdapUser();
-        $this->addLdapRoles();
-
+        if ($this->params['client']['auth_only'] === false) {
+            $this->addLdapUser();
+            $this->addLdapRoles();
+        }
         return $this;
     }
 
@@ -344,7 +347,7 @@ class LdapUserManager implements LdapUserManagerInterface
         return $this->ldapConnection->bind($this->ldapUser['dn'], $this->password);
     }
 
-    private function bindByUsername()
+    public function bindByUsername()
     {
         return $this->ldapConnection->bind($this->username, $this->password);
     }

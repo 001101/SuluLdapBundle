@@ -18,9 +18,14 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Sulu\Bundle\LdapBundle\Manager\LdapUserManagerInterface;
 use Sulu\Bundle\LdapBundle\Event\LdapUserEvent;
 use Sulu\Bundle\LdapBundle\Event\LdapEvents;
+use Sulu\Bundle\LdapBundle\Entity\UserRepository;
+use Doctrine\ORM\NoResultException;
 
 class LdapAuthenticationProvider implements AuthenticationProviderInterface
 {
+    /** @var array */
+    protected $params;
+
     /** @var UserProviderInterface */
     protected $userProvider;
 
@@ -39,6 +44,9 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
     /** @var array */
     protected $config;
 
+    /** @var UserRepository */
+    private $userRepository;
+
     /**
      * Constructor
      *
@@ -52,6 +60,8 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
      * @param string $providerKey
      * @param bool $hideUserNotFoundExceptions
      * @param array $config
+     * @param array $params
+     * @param UserRepository $userRepository
      */
     public function __construct(
         UserProviderInterface $userProvider,
@@ -60,7 +70,9 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
         EventDispatcherInterface $dispatcher = null,
         $providerKey,
         $hideUserNotFoundExceptions = true,
-        $config
+        $config,
+        array $params,
+        UserRepository $userRepository
     ) {
         $this->userProvider = $userProvider;
         $this->daoAuthenticationProvider = $daoAuthenticationProvider;
@@ -69,6 +81,8 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
         $this->providerKey = $providerKey;
         $this->hideUserNotFoundExceptions = $hideUserNotFoundExceptions;
         $this->config = $config;
+        $this->params = $params;
+        $this->userRepository = $userRepository;
     }
 
     /**
@@ -85,6 +99,10 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
         }
 
         try {
+            if ($this->params['client']['auth_only']) {
+                $this->handleAuthOnly($token);
+            }
+
             /** @var LdapUserInterface $user */
             $user = $this->userProvider->loadUserByUsername($token->getUsername());
 
@@ -108,9 +126,12 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
 
                 return $token;
             }
-            
+
         } catch (\Exception $e) {
-            if ($e instanceof ConnectionException || $e instanceof UsernameNotFoundException) {
+            if ($e instanceof ConnectionException ||
+                $e instanceof UsernameNotFoundException ||
+                $e instanceof NoResultException
+            ) {
                 if ($this->hideUserNotFoundExceptions) {
                     throw new BadCredentialsException('Bad credentials', 0, $e);
                 }
@@ -118,10 +139,43 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
 
             throw $e;
         }
-        
+
         if ($user instanceof LdapUserInterface) {
             return $this->daoAuthenticationProvider->authenticate($token);
         }
+    }
+
+    /**
+     * Only auth user via ldap.
+     *
+     * @param TokenInterface $token
+     */
+    private function handleAuthOnly(TokenInterface $token)
+    {
+        $status = 0;
+        $userName = $token->getUser();
+        if (isset($this->params['client']['login_domain'])) {
+            $domain = $this->params['client']['login_domain'];
+            $loginName = $userName . '@' . $domain;
+        }
+        $status = $this->bind($loginName, $token);
+
+        $user = null;
+        if ($status) {
+            $user = $this->userRepository->findUserByUsername($token->getUser());
+        }
+        if ($user) {
+            $token = new UsernamePasswordToken(
+                $user,
+                null,
+                $this->providerKey,
+                $user->getRoles()
+            );
+        } else {
+            throw new BadCredentialsException('Bad credentials', 0, $e);
+        }
+
+        return $token;
     }
 
     /**
@@ -147,12 +201,12 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
             }
         }
 
-        $this->bind($user, $token);
+        $this->bind($user->getUsername(), $token);
 
         if ($user->getDn() === null) {
             $user = $this->reloadUser($user);
         }
-        
+
         if ($this->dispatcher !== null) {
             $userEvent = new LdapUserEvent($user);
             try {
@@ -178,18 +232,23 @@ class LdapAuthenticationProvider implements AuthenticationProviderInterface
     /**
      * Authenticate the user with LDAP bind.
      *
-     * @param LdapUserInterface $user
+     * @param string $username
      * @param TokenInterface $token
      *
      * @return true
      */
-    private function bind(LdapUserInterface $user, TokenInterface $token)
+    private function bind($username, TokenInterface $token)
     {
         if ($token->getCredentials() != null) {
             $this->ldapManager
-                ->setUsername($user->getUsername())
+                ->setUsername($username)
                 ->setPassword($token->getCredentials());
-            $this->ldapManager->auth();
+            if (isset($this->params['client']['auth_only']) &&
+                $this->params['client']['auth_only'] === true) {
+                $this->ldapManager->bindByUsername();
+            } else {
+                $this->ldapManager->auth();
+            }
         }
 
         return true;
