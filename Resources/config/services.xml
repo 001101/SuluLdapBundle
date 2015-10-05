@@ -31,6 +31,7 @@
             <argument type="service" id="sulu_ldap.ldap_manager"/>
             <argument type="service" id="doctrine.orm.default_entity_manager"/>
             <argument>%sulu_ldap.authentication.bind_username_before%</argument>
+            <argument>%sulu_ldap.ldap_connection.params%</argument>
         </service>
 
         <service id="sulu_ldap.ldap_connection" class="%sulu_ldap.ldap_connection.class%" public="false">
@@ -52,6 +53,8 @@
             <argument /> <!-- Provider-key -->
             <argument>%security.authentication.hide_user_not_found%</argument>
             <argument /> <!-- security config -->
+            <argument>%sulu_ldap.ldap_connection.params%</argument>
+            <argument type="service" id="sulu_ldap.security.user_repository"/>
         </service>
 
         <service id="sulu_ldap.authentication.success_handler" parent="security.authentication.success_handler"/>

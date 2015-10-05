@@ -44,6 +44,8 @@ class Configuration implements ConfigurationInterface
             ->scalarNode('version')->end()
             ->scalarNode('username')->end()
             ->scalarNode('password')->end()
+            ->scalarNode('login_domain')->end()
+            ->scalarNode('auth_only')->defaultFalse()->end()
             ->booleanNode('bind_username_before')->defaultFalse()->end()
             ->scalarNode('referrals_enabled')->end()
             ->scalarNode('network_timeout')->end()
@@ -60,7 +62,6 @@ class Configuration implements ConfigurationInterface
         $node = $treeBuilder->root('user');
 
         $node
-            ->isRequired()
             ->children()
             ->scalarNode('base_dn')->isRequired()->cannotBeEmpty()->end()
             ->scalarNode('filter')->end()

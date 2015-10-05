@@ -86,7 +86,7 @@ class LdapConnection implements LdapConnectionInterface
     {
         if ($ress === null) {
             if ($this->ress === null) {
-                $this->connect();
+                $this->connect($user_dn, $password);
             }
 
             $ress = $this->ress;
@@ -138,7 +138,7 @@ class LdapConnection implements LdapConnectionInterface
         return $this->params[$index]['user_attribute'];
     }
 
-    private function connect()
+    private function connect($user_dn = null, $password = null)
     {
         $port = isset($this->params['client']['port']) ? $this->params['client']['port'] : '389';
 
@@ -156,7 +156,9 @@ class LdapConnection implements LdapConnectionInterface
             ldap_set_option($ress, LDAP_OPT_NETWORK_TIMEOUT, $this->params['client']['network_timeout']);
         }
 
-        if (isset($this->params['client']['username'])) {
+        if ($user_dn) {
+            @ldap_bind($ress, $user_dn, $password);
+        } elseif (isset($this->params['client']['username'])) {
             if (!isset($this->params['client']['password'])) {
                 throw new \Exception('You must uncomment password key');
             }
@@ -165,8 +167,8 @@ class LdapConnection implements LdapConnectionInterface
             //$dn =  $this->params['user']['mapping']['username'] . '=' . $this->params['client']['username'] . ',' . $this->params['user']['base_dn'];
 
             @ldap_bind($ress, $this->params['client']['username'], $this->params['client']['password']);
-            $this->checkLdapError($ress);
         }
+        $this->checkLdapError($ress);
 
         $this->ress = $ress;
 
